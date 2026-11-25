@@ -69,6 +69,22 @@ Rapport détaillé dans `htmlcov/index.html`.
 | 1er passage : 99 % | `except ValueError` de `_is_same_or_inside` | situation réelle non testée (destination relative, ou autre lecteur sous Windows) : test ajouté |
 | 2e passage : **100 %** lignes et branches | - | - |
 
+### Tests de mutation (Cosmic Ray)
+
+`mutmut` ne fonctionne pas nativement sous Windows (WSL requis) : on utilise [Cosmic Ray](https://cosmic-ray.readthedocs.io/),
+configuré dans `cosmic-ray.toml` (mutation de `filemanager.py`, tests `test_fmgr.py` + `test_os_filesystem.py`).
+
+```bash
+# Windows : forcer l'UTF-8, sinon la sortie de pytest est mal décodée (mutants classés « incompetent »)
+set PYTHONUTF8=1                                   # PowerShell : $env:PYTHONUTF8=1
+cosmic-ray init cosmic-ray.toml session.sqlite     # liste les mutants
+cosmic-ray exec cosmic-ray.toml session.sqlite     # exécute les tests sur chaque mutant
+cr-report --surviving-only session.sqlite          # mutants survivants (ou : python -m cosmic_ray.tools.report)
+cr-html session.sqlite > mutation.html             # rapport HTML
+```
+
+1er passage : 85 mutants, 64 tués, **21 survivants** (une issue GitHub par mutant survivant).
+
 # Atelier 1 - Étapes (une par commit)
 
 1. **Refactorisation** : l'exploration (répertoire courant, affichage, navigation, sélection) est sortie de `FileManager` vers une nouvelle classe `FileExplorer`. `FileManager` ne garde que les traitements (copie, déplacement, suppression).

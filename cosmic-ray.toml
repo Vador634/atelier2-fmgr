@@ -1,0 +1,8 @@
+[cosmic-ray]
+module-path = "filemanager.py"
+timeout = 30.0
+excluded-modules = []
+test-command = "python -m pytest -x -q -p no:cacheprovider test_fmgr.py test_os_filesystem.py"
+
+[cosmic-ray.distributor]
+name = "local"
