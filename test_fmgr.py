@@ -13,7 +13,7 @@ Organisation :
 import unittest
 
 from filemanager import (FileManager, SelectionProvider, FileSystemReader,
-                  FileSystemWriter, UserInterface, ErrorChoice)
+                         FileSystemWriter, MessageOutput, UserInterface, ErrorChoice)
 
 
 # ---------------------------------------------------------------------------
@@ -568,6 +568,27 @@ class TestErrorChoice(FileManagerTestCase):
         self.manager.copy_files('/b')
         self.assertIn("Rollback error: Locked: /b/2.txt", self.ui.messages)
         self.assertNoFiles('/b/1.txt')  # le rollback a continué après l'erreur
+
+
+# ---------------------------------------------------------------------------
+# Contrat des interfaces (mutation testing : mutants @abstractmethod retiré)
+# ---------------------------------------------------------------------------
+
+class TestInterfaces(unittest.TestCase):
+    EXPECTED = {
+        SelectionProvider: {'get_selected_files', 'clear_selection'},
+        FileSystemReader: {'exists', 'is_file', 'is_dir', 'list_dir'},
+        FileSystemWriter: {'copy', 'move', 'remove_file', 'remove_tree', 'make_temp_dir'},
+        MessageOutput: {'show_message'},
+        UserInterface: {'show_message', 'error_choice'},
+    }
+
+    def test_interfaces_declare_their_abstract_methods(self):
+        for interface, methods in self.EXPECTED.items():
+            with self.subTest(interface=interface.__name__):
+                self.assertEqual(interface.__abstractmethods__, frozenset(methods))
+                with self.assertRaises(TypeError):
+                    interface()
 
 
 if __name__ == '__main__':
