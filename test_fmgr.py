@@ -524,6 +524,15 @@ class TestErrorChoice(FileManagerTestCase):
         self.assertEqual(self.ui.messages, ["Copy stopped", "0 file(s) copied"])
         self.assertEqual(len(self.fs.calls), 1)
 
+    def test_negative_choice_stops_the_operation(self):
+        # un choix négatif est inconnu : ni « ignorer » ni « toujours ignorer »
+        self.make(self.FILES, self.SELECTED, failing={'/a/1.txt', '/a/2.txt'},
+                  choices=[-1, ErrorChoice.IGNORE])
+        self.manager.copy_files('/b')
+        self.assertEqual(self.ui.messages, ["Copy stopped", "0 file(s) copied"])
+        self.assertEqual(len(self.ui.errors), 1)
+        self.assertNoFiles('/b/3.txt')
+
     def test_cancel_rolls_back_copy(self):
         self.make(self.FILES, self.SELECTED, failing={'/a/3.txt'},
                   choices=[ErrorChoice.CANCEL])
