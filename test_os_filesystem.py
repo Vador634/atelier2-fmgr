@@ -2,7 +2,8 @@
 dans un dossier temporaire fourni par pytest (tmp_path)."""
 import pytest
 
-from fmgr import FileManager, OsFileSystem, ErrorChoice
+from filemanager import FileManager, ErrorChoice
+from fmgr import OsFileSystem
 from test_fmgr import FakeSelection, FakeUI
 
 

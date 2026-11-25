@@ -12,7 +12,7 @@ Organisation :
 """
 import unittest
 
-from fmgr import (FileManager, SelectionProvider, FileSystemReader,
+from filemanager import (FileManager, SelectionProvider, FileSystemReader,
                   FileSystemWriter, UserInterface, ErrorChoice)
 
 
