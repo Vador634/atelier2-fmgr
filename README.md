@@ -1,9 +1,13 @@
-# Ateliers 1 et 2 - Testabilité et tests de `FileManager`
+# Gestionnaire de fichiers - Ateliers 1 et 2
 
-Gestionnaire de fichiers en console (`fmgr.py`) refactorisé pour rendre `FileManager` testable (atelier 1),
-puis couvert par des tests unitaires, de couverture et de mutation (atelier 2).
+Gestionnaire de fichiers en console (`fmgr.py`).
 
-## Équipe
+- **Atelier 1** : refactorisation pour rendre `FileManager` testable.
+- **Atelier 2** : tests unitaires, couverture de code et tests de mutation de `FileManager`.
+
+L'historique git contient les commits de l'atelier 1 puis ceux de l'atelier 2 (préfixés « Atelier 2 » / « Mutation »).
+
+## Équipe (atelier 2)
 
 - Emma Gailledrat ([@EmmaDotCom](https://github.com/EmmaDotCom))
 - Kilian Carasco ([@Vador634](https://github.com/Vador634))
@@ -22,6 +26,49 @@ pip install -r requirements-dev.txt
 python fmgr.py              # application console
 python -m pytest -v         # tests unitaires (ou : python -m unittest -v)
 ```
+
+---
+
+# Atelier 1 - Testabilité d'une classe
+
+## Étapes (une par commit)
+
+1. **Refactorisation** : l'exploration (répertoire courant, affichage, navigation, sélection) est sortie de `FileManager` vers une nouvelle classe `FileExplorer`. `FileManager` ne garde que les traitements (copie, déplacement, suppression).
+2. **Dépendances** : inversion de contrôle. `FileManager` reçoit par son constructeur des interfaces au lieu d'utiliser directement `os`, `shutil`, `FileExplorer` et la console :
+   - `SelectionProvider` (implémentée par `FileExplorer`)
+   - `FileSystemReader` / `FileSystemWriter` (implémentées par `OsFileSystem`)
+   - `UserInterface` (implémentée par `ConsoleUserInterface`)
+
+   Principes SOLID respectés : **L** (implémentations réelles et doublures de test interchangeables), **I** (interfaces petites, lecture et écriture séparées), **D** (`FileManager` dépend d'abstractions ; seul `main_menu()` choisit les implémentations concrètes).
+   Les premiers tests (`test_fmgr.py`) injectent un système de fichiers en mémoire et une interface utilisateur scriptée : aucun fichier réel n'est touché.
+3. **Évolutions** : en cas d'erreur sur un fichier (E/S, fichier inexistant, verrouillé…), `FileManager` appelle `UserInterface.error_choice(operation, path, error)`, qui renvoie :
+   - `0` : ignorer l'erreur et continuer
+   - `1` : toujours ignorer les erreurs (jusqu'à la fin de l'opération en cours)
+   - `2` : stopper l'opération en cours (ce qui est déjà fait est conservé)
+   - `3` : annuler l'opération en cours avec **rollback** (copies supprimées, fichiers déplacés remis à leur place, fichiers supprimés restaurés : ils passent d'abord par une corbeille temporaire, vidée à la fin de l'opération)
+
+## Diagramme de classes
+
+```mermaid
+classDiagram
+    class SelectionProvider {<<interface>> +get_selected_files() +clear_selection()}
+    class FileSystemReader {<<interface>> +exists() +is_file() +is_dir() +list_dir()}
+    class FileSystemWriter {<<interface>> +copy() +move() +remove_file() +remove_tree() +make_temp_dir()}
+    class MessageOutput {<<interface>> +show_message()}
+    class UserInterface {<<interface>> +error_choice(operation, path, error) int}
+    MessageOutput <|-- UserInterface
+    SelectionProvider <|.. FileExplorer
+    FileSystemReader <|.. OsFileSystem
+    FileSystemWriter <|.. OsFileSystem
+    UserInterface <|.. ConsoleUserInterface
+    FileExplorer o-- FileSelector
+    FileManager --> SelectionProvider
+    FileManager --> FileSystemReader
+    FileManager --> FileSystemWriter
+    FileManager --> UserInterface
+```
+
+---
 
 # Atelier 2 - Test
 
@@ -83,41 +130,15 @@ cr-report --surviving-only session.sqlite          # mutants survivants (ou : py
 cr-html session.sqlite > mutation.html             # rapport HTML
 ```
 
-1er passage : 85 mutants, 64 tués, **21 survivants** (une issue GitHub par mutant survivant).
+| Passage | Mutants | Tués | Survivants |
+|---|---|---|---|
+| 1er | 85 | 64 | 21 (une issue par mutant : #1 à #21) |
+| après corrections | 85 | 81 | 4 (équivalents, non pertinents) |
 
-# Atelier 1 - Étapes (une par commit)
-
-1. **Refactorisation** : l'exploration (répertoire courant, affichage, navigation, sélection) est sortie de `FileManager` vers une nouvelle classe `FileExplorer`. `FileManager` ne garde que les traitements (copie, déplacement, suppression).
-2. **Dépendances** : inversion de contrôle. `FileManager` reçoit par son constructeur des interfaces au lieu d'utiliser directement `os`, `shutil`, `FileExplorer` et la console :
-   - `SelectionProvider` (implémentée par `FileExplorer`)
-   - `FileSystemReader` / `FileSystemWriter` (implémentées par `OsFileSystem`)
-   - `UserInterface` (implémentée par `ConsoleUserInterface`)
-
-   Principes SOLID respectés : **L** (implémentations réelles et doublures de test interchangeables), **I** (interfaces petites, lecture et écriture séparées), **D** (`FileManager` dépend d'abstractions ; seul `main_menu()` choisit les implémentations concrètes).
-   Les tests (`test_fmgr.py`) injectent un système de fichiers en mémoire et une interface utilisateur scriptée : aucun fichier réel n'est touché.
-3. **Évolutions** : en cas d'erreur sur un fichier (E/S, fichier inexistant, verrouillé…), `FileManager` appelle `UserInterface.error_choice(operation, path, error)`, qui renvoie :
-   - `0` : ignorer l'erreur et continuer
-   - `1` : toujours ignorer les erreurs (jusqu'à la fin de l'opération en cours)
-   - `2` : stopper l'opération en cours (ce qui est déjà fait est conservé)
-   - `3` : annuler l'opération en cours avec **rollback** (copies supprimées, fichiers déplacés remis à leur place, fichiers supprimés restaurés : ils passent d'abord par une corbeille temporaire, vidée à la fin de l'opération)
-
-## Diagramme de classes
-
-```mermaid
-classDiagram
-    class SelectionProvider {<<interface>> +get_selected_files() +clear_selection()}
-    class FileSystemReader {<<interface>> +exists() +is_file() +is_dir() +list_dir()}
-    class FileSystemWriter {<<interface>> +copy() +move() +remove_file() +remove_tree() +make_temp_dir()}
-    class MessageOutput {<<interface>> +show_message()}
-    class UserInterface {<<interface>> +error_choice(operation, path, error) int}
-    MessageOutput <|-- UserInterface
-    SelectionProvider <|.. FileExplorer
-    FileSystemReader <|.. OsFileSystem
-    FileSystemWriter <|.. OsFileSystem
-    UserInterface <|.. ConsoleUserInterface
-    FileExplorer o-- FileSelector
-    FileManager --> SelectionProvider
-    FileManager --> FileSystemReader
-    FileManager --> FileSystemWriter
-    FileManager --> UserInterface
-```
+| Issues | Mutant survivant | Pertinent | Traitement |
+|---|---|---|---|
+| #1 à #13 | `@abstractmethod` retiré d'une méthode d'interface | oui | test du contrat abstrait des interfaces |
+| #14, #15 | `IGNORE = -1`, `CANCEL = 4` | oui | test des valeurs 0-3 de `ErrorChoice` (contrat avec la console) |
+| #16, #17 | `choice == IGNORE / ALWAYS_IGNORE` remplacé par `<=` | oui | test d'un choix négatif (doit stopper) |
+| #18 à #20 | `==` remplacé par `is` sur les choix | non | équivalent : CPython met en cache les petits entiers |
+| #21 | `commonpath(...) == folder` remplacé par `>=` | non | équivalent : `commonpath` est un préfixe de `folder`, `>=` n'est vrai qu'en cas d'égalité |
