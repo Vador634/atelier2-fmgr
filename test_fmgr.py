@@ -591,5 +591,12 @@ class TestInterfaces(unittest.TestCase):
                     interface()
 
 
+class TestErrorChoiceValues(unittest.TestCase):
+    def test_values_match_the_console_menu(self):
+        # contrat avec l'interface utilisateur : la console renvoie 0, 1, 2 ou 3
+        self.assertEqual((ErrorChoice.IGNORE, ErrorChoice.ALWAYS_IGNORE,
+                          ErrorChoice.STOP, ErrorChoice.CANCEL), (0, 1, 2, 3))
+
+
 if __name__ == '__main__':
     unittest.main()
