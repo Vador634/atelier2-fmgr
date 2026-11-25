@@ -21,8 +21,10 @@ from fmgr import (FileManager, SelectionProvider, FileSystemReader,
 # ---------------------------------------------------------------------------
 
 def norm(path):
-    """Les chemins sont stockés avec des '/' (os.path.join met des '\\' sous Windows)"""
-    return path.replace('\\', '/')
+    """Les chemins sont stockés avec des '/' (os.path.join met des '\\' sous Windows)
+    et sans séparateur final"""
+    path = path.replace('\\', '/')
+    return path.rstrip('/') or path
 
 
 class FakeSelection(SelectionProvider):

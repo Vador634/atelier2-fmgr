@@ -125,6 +125,9 @@ class OsFileSystem(FileSystemReader, FileSystemWriter):
         return os.listdir(path)
 
     def copy(self, source, destination):
+        if os.path.isdir(source):
+            target = os.path.join(destination, os.path.basename(os.path.normpath(source)))
+            return shutil.copytree(source, target)
         return shutil.copy2(source, destination)
 
     def move(self, source, destination):
@@ -285,18 +288,16 @@ class FileManager:
 
     # -- moteur commun ------------------------------------------------------
     def _run(self, operation, action):
-        """Applique action(file) à chaque fichier sélectionné.
+        """Applique action(file) à chaque fichier sélectionné (une seule fois chacun).
 
         action renvoie une fonction d'annulation, utilisée pour le rollback.
         Renvoie le nombre de fichiers traités, ou None si l'opération est annulée.
         """
         undo_stack = []
         always_ignore = False
-        done = 0
-        for file in list(self.selection.get_selected_files()):
+        for file in dict.fromkeys(self.selection.get_selected_files()):
             try:
                 undo_stack.append(action(file))
-                done += 1
             except Exception as e:
                 if always_ignore:
                     continue
@@ -315,7 +316,7 @@ class FileManager:
                 self.ui.show_message(f"{operation} stopped")
                 break
         self.selection.clear_selection()
-        return done
+        return len(undo_stack)
 
     def _rollback(self, undo_stack):
         for undo in reversed(undo_stack):
@@ -324,6 +325,25 @@ class FileManager:
             except Exception as e:
                 self.ui.show_message(f"Rollback error: {e}")
 
+    def _check_destination(self, destination):
+        """Une destination qui n'est pas un dossier existant est refusée
+        (sinon shutil copie/déplace la source sous ce nom)"""
+        if self.reader.is_dir(destination):
+            return True
+        self.ui.show_message(f"Destination is not a folder: {destination}")
+        return False
+
+    def _check_source(self, file, destination):
+        """Vérifie qu'un élément peut être copié/déplacé dans destination,
+        renvoie le chemin cible"""
+        self._check_exists(file)
+        if _is_same_or_inside(destination, file):
+            raise ValueError(f"Cannot put a folder into itself: {file}")
+        target = os.path.join(destination, os.path.basename(file))
+        if self.reader.exists(target):
+            raise FileExistsError(f"Already exists: {target}")
+        return target
+
     def _check_exists(self, file):
         if not self.reader.exists(file):
             raise FileNotFoundError(f"File not found: {file}")
@@ -331,14 +351,17 @@ class FileManager:
     def _remove(self, path):
         if self.reader.is_dir(path):
             self.writer.remove_tree(path)
-        elif self.reader.exists(path):
+        else:
             self.writer.remove_file(path)
 
     # -- opérations ---------------------------------------------------------
     def copy_files(self, destination):
         """Copy selected files"""
+        if not self._check_destination(destination):
+            return
+
         def action(file):
-            self._check_exists(file)
+            self._check_source(file, destination)
             target = self.writer.copy(file, destination)
             return lambda: self._remove(target)
 
@@ -348,8 +371,11 @@ class FileManager:
 
     def move_files(self, destination):
         """Move selected files"""
+        if not self._check_destination(destination):
+            return
+
         def action(file):
-            self._check_exists(file)
+            self._check_source(file, destination)
             origin = os.path.dirname(file)
             target = self.writer.move(file, destination)
             return lambda: self.writer.move(target, origin)
@@ -361,25 +387,37 @@ class FileManager:
     def delete_files(self):
         """Delete selected files.
 
-        Les éléments sont d'abord déplacés dans une corbeille temporaire, ce qui
-        permet le rollback ; la corbeille est vidée à la fin de l'opération.
+        Chaque élément est d'abord déplacé dans sa propre corbeille temporaire
+        (pas de collision entre fichiers de même nom), ce qui permet le
+        rollback ; les corbeilles sont vidées à la fin de l'opération.
         """
-        trash = None
+        trashes = []
 
         def action(file):
-            nonlocal trash
             self._check_exists(file)
-            if trash is None:
-                trash = self.writer.make_temp_dir()
+            trash = self.writer.make_temp_dir()
+            trashes.append(trash)
             origin = os.path.dirname(file)
             trashed = self.writer.move(file, trash)
             return lambda: self.writer.move(trashed, origin)
 
         done = self._run("Delete", action)
-        if trash is not None:
-            self._remove(trash)
+        for trash in trashes:
+            try:
+                self._remove(trash)
+            except Exception as e:
+                self.ui.show_message(f"Trash cleanup error: {e}")
         if done is not None:
             self.ui.show_message(f"{done} file(s)/folder(s) deleted")
+
+
+def _is_same_or_inside(path, folder):
+    """True si path est folder lui-même ou se trouve dans folder"""
+    path, folder = os.path.normpath(path), os.path.normpath(folder)
+    try:
+        return os.path.commonpath([path, folder]) == folder
+    except ValueError:  # lecteurs différents (Windows) ou chemins mélangés
+        return False
 
 
 def main_menu():

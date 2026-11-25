@@ -5,9 +5,7 @@ puis couvert par des tests unitaires, de couverture et de mutation (atelier 2).
 
 ## Équipe
 
-- Xavier Sanchez ([@xaviersanc](https://github.com/xaviersanc))
 - Emma Gailledrat ([@EmmaDotCom](https://github.com/EmmaDotCom))
-- Alexandre Sanchez ([@sonical0](https://github.com/sonical0))
 - Kilian Carasco ([@Vador634](https://github.com/Vador634))
 
 ## Installation
@@ -31,6 +29,27 @@ python -m pytest -v         # tests unitaires (ou : python -m unittest -v)
 
 Dépendances de développement dans `requirements-dev.txt` (pytest, pytest-cov, cosmic-ray), configuration
 de pytest dans `pytest.ini`. Les tests de l'atelier 1 passent avec pytest (16 tests).
+
+## Étape 2 - Tests
+
+- `test_fmgr.py` : tests unitaires de `copy_files`, `move_files` et `delete_files` (cas usuels, extrêmes,
+  d'erreur) et des choix de l'utilisateur en cas d'erreur. Les dépendances de `FileManager` sont simulées
+  par des doublures en mémoire (`FakeSelection`, `FakeFileSystem`, `FakeUI`) ; `FakeFileSystem` reproduit
+  le comportement de `shutil` (écrasement de la cible, destination inexistante prise comme nouveau nom).
+- `test_os_filesystem.py` : quelques tests d'intégration avec le vrai système de fichiers (dossier
+  temporaire `tmp_path`).
+
+Défauts révélés par les tests puis corrigés dans `FileManager` :
+
+| Cas | Avant | Après |
+|---|---|---|
+| Destination inexistante ou fichier | source copiée/déplacée sous ce nom, les fichiers s'écrasent | opération refusée, sélection conservée |
+| Fichier de même nom déjà dans la destination | écrasé sans prévenir, puis **supprimé** par un rollback | erreur `FileExistsError` proposée à l'utilisateur |
+| Dossier copié/déplacé dans lui-même ou un sous-dossier | erreur de `shutil` ou copie récursive | erreur `ValueError` proposée à l'utilisateur |
+| Fichier sélectionné deux fois | traité deux fois | traité une seule fois |
+| Suppression de fichiers de même nom | collision dans la corbeille (rollback faux) | une corbeille par élément |
+| Erreur au vidage de la corbeille | exception non gérée | message `Trash cleanup error` |
+| Copie d'un dossier (`OsFileSystem`) | impossible (`copy2`) | `copytree` |
 
 # Atelier 1 - Étapes (une par commit)
 
