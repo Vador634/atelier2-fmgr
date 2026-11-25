@@ -1,6 +1,7 @@
-# Atelier 1 - Testabilité d'une classe
+# Ateliers 1 et 2 - Testabilité et tests de `FileManager`
 
-Gestionnaire de fichiers en console (`fmgr.py`) refactorisé pour rendre `FileManager` testable.
+Gestionnaire de fichiers en console (`fmgr.py`) refactorisé pour rendre `FileManager` testable (atelier 1),
+puis couvert par des tests unitaires, de couverture et de mutation (atelier 2).
 
 ## Équipe
 
@@ -9,14 +10,29 @@ Gestionnaire de fichiers en console (`fmgr.py`) refactorisé pour rendre `FileMa
 - Alexandre Sanchez ([@sonical0](https://github.com/sonical0))
 - Kilian Carasco ([@Vador634](https://github.com/Vador634))
 
+## Installation
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate         # Windows (Linux/macOS : source .venv/bin/activate)
+pip install -r requirements-dev.txt
+```
+
 ## Lancer
 
 ```bash
 python fmgr.py              # application console
-python -m unittest -v       # tests unitaires
+python -m pytest -v         # tests unitaires (ou : python -m unittest -v)
 ```
 
-## Étapes (une par commit)
+# Atelier 2 - Test
+
+## Étape 1 - Projet de test
+
+Dépendances de développement dans `requirements-dev.txt` (pytest, pytest-cov, cosmic-ray), configuration
+de pytest dans `pytest.ini`. Les tests de l'atelier 1 passent avec pytest (16 tests).
+
+# Atelier 1 - Étapes (une par commit)
 
 1. **Refactorisation** : l'exploration (répertoire courant, affichage, navigation, sélection) est sortie de `FileManager` vers une nouvelle classe `FileExplorer`. `FileManager` ne garde que les traitements (copie, déplacement, suppression).
 2. **Dépendances** : inversion de contrôle. `FileManager` reçoit par son constructeur des interfaces au lieu d'utiliser directement `os`, `shutil`, `FileExplorer` et la console :
