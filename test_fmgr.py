@@ -275,6 +275,13 @@ class TestCopy(FileManagerTestCase):
         self.assertEqual(self.ui.errors, [])
         self.assertFiles('/a/dd/d/z.txt')
 
+    def test_copy_folder_to_relative_destination(self):
+        # chemin relatif + chemin absolu : os.path.commonpath lève ValueError
+        self.make(dict(FILES, **{'b': 'dir'}), ['/a/d'])
+        self.manager.copy_files('b')
+        self.assertEqual(self.ui.errors, [])
+        self.assertFiles('b/d/z.txt')
+
     def test_cancel_copy_keeps_previously_existing_file(self):
         # sans contrôle, la copie écrasait /b/y.txt puis le rollback le supprimait
         self.make(dict(FILES, **{'/b/y.txt': 'file'}), ['/a/x.txt', '/a/y.txt'],

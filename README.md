@@ -51,6 +51,24 @@ Défauts révélés par les tests puis corrigés dans `FileManager` :
 | Erreur au vidage de la corbeille | exception non gérée | message `Trash cleanup error` |
 | Copie d'un dossier (`OsFileSystem`) | impossible (`copy2`) | `copytree` |
 
+## Étape 3 - Couverture et tests de mutation
+
+`FileManager` et ses interfaces sont isolés dans `filemanager.py` pour cibler la couverture et la mutation
+sur la classe testée (le menu console et l'exploration restent dans `fmgr.py`).
+
+### Couverture (lignes + branchements `if/else`)
+
+```bash
+python -m pytest --cov=filemanager --cov-branch --cov-report=term-missing --cov-report=html
+```
+
+Rapport détaillé dans `htmlcov/index.html`.
+
+| Rapport | Lignes non couvertes | Traitement |
+|---|---|---|
+| 1er passage : 99 % | `except ValueError` de `_is_same_or_inside` | situation réelle non testée (destination relative, ou autre lecteur sous Windows) : test ajouté |
+| 2e passage : **100 %** lignes et branches | - | - |
+
 # Atelier 1 - Étapes (une par commit)
 
 1. **Refactorisation** : l'exploration (répertoire courant, affichage, navigation, sélection) est sortie de `FileManager` vers une nouvelle classe `FileExplorer`. `FileManager` ne garde que les traitements (copie, déplacement, suppression).
